@@ -75,7 +75,7 @@ func main() {
 			log.Fatalf("%s: %s", fname, err)
 		}
 
-		u := baseURL
+		u := *baseURL
 		u.Path += "/" + fname
 
 		e := Episode{
