@@ -70,16 +70,20 @@ func main() {
 			log.Fatalf("%s: %s", fname, err)
 		}
 
+		var title string
 		tp, err := taggolib.New(f)
 		if err != nil {
-			log.Fatalf("%s: %s", fname, err)
+			log.Printf("%s: Error loading tags: %s.  Falling back to filename for title", fname, err)
+			title = fname
+		} else {
+			title = tp.Title()
 		}
 
 		u := *baseURL
 		u.Path += "/" + fname
 
 		e := Episode{
-			Title: tp.Title(),
+			Title: title,
 			Date:  s.ModTime().Format(time.RFC1123Z),
 			URL:   u.String(),
 			Size:  s.Size(),
