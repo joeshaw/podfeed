@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"sort"
 	"text/template"
 	"time"
 
@@ -12,18 +13,18 @@ import (
 
 const rssTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
-    <channel>
-	<title>{{.FeedTitle}}</title>
-	<description>{{.FeedDesc}}</description>
-	{{range .Episodes}}
-        <item>
-            <title>{{.Title}}</title>
-            <pubDate>{{.Date}}</pubDate>
-	    <enclosure url="{{.URL}}" length="{{.Size}}" type="audio/mpeg" />
-	    <guid isPermaLink="false">{{.URL}}</guid>
-        </item>
-        {{end}}
-    </channel>
+  <channel>
+    <title>{{.FeedTitle}}</title>
+    <description>{{.FeedDesc}}</description>
+    {{range .Episodes}}
+    <item>
+      <title>{{.Title}}</title>
+      <pubDate>{{.FormattedDate}}</pubDate>
+      <enclosure url="{{.URL}}" length="{{.Size}}" type="audio/mpeg" />
+      <guid isPermaLink="false">{{.URL}}</guid>
+    </item>
+    {{end}}
+  </channel>
 </rss>
 `
 
@@ -31,9 +32,13 @@ var tmpl = template.Must(template.New("podfeed").Parse(rssTemplate))
 
 type Episode struct {
 	Title string
-	Date  string
+	Date  time.Time
 	URL   string
 	Size  int64
+}
+
+func (e Episode) FormattedDate() string {
+	return e.Date.Format(time.RFC1123Z)
 }
 
 type Feed struct {
@@ -41,6 +46,10 @@ type Feed struct {
 	FeedDesc  string
 	Episodes  []Episode
 }
+
+func (f Feed) Len() int           { return len(f.Episodes) }
+func (f Feed) Swap(i, j int)      { f.Episodes[i], f.Episodes[j] = f.Episodes[j], f.Episodes[i] }
+func (f Feed) Less(i, j int) bool { return f.Episodes[i].Date.Before(f.Episodes[j].Date) }
 
 func main() {
 	if len(os.Args) < 4 {
@@ -84,7 +93,7 @@ func main() {
 
 		e := Episode{
 			Title: title,
-			Date:  s.ModTime().Format(time.RFC1123Z),
+			Date:  s.ModTime(),
 			URL:   u.String(),
 			Size:  s.Size(),
 		}
@@ -93,5 +102,6 @@ func main() {
 		f.Close()
 	}
 
+	sort.Sort(feed)
 	tmpl.Execute(os.Stdout, feed)
 }
